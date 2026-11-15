@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AstroVibe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Cairo:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: a two-column mission console. Left rail holds the farm inputs and the Field Shift scenario;
+   right column answers with ranked rotations, an orbital view of planting windows, and a stress test. */
+:root{
+  --bg:#EDF1EC; --surface:#F8FAF6; --ink:#14201B; --muted:#5A6A62; --line:#D2DBD3;
+  --accent:#1F6F5B; --accent-ink:#FFFFFF; --clay:#B5541F; --bad:#B23A3A;
+  --c1:#1F6F5B; --c2:#B5541F; --c3:#3E64B0;
+  --f-display:'Bricolage Grotesque','Cairo',system-ui,sans-serif;
+  --f-body:'Inter','Cairo',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1511; --surface:#121E19; --ink:#E6EEE8; --muted:#8FA398; --line:#25382F;
+    --accent:#5CC9A7; --accent-ink:#06130E; --clay:#E58A52; --bad:#E27676;
+    --c1:#5CC9A7; --c2:#E58A52; --c3:#86A9EA; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1511; --surface:#121E19; --ink:#E6EEE8; --muted:#8FA398; --line:#25382F;
+  --accent:#5CC9A7; --accent-ink:#06130E; --clay:#E58A52; --bad:#E27676;
+  --c1:#5CC9A7; --c2:#E58A52; --c3:#86A9EA; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#app{max-width:1280px;margin-inline:auto}
+#app[dir=rtl]{font-family:'Cairo','Inter',system-ui,sans-serif}
+svg{direction:ltr;max-width:100%;height:auto;display:block}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+#app[dir=rtl] .eyebrow{letter-spacing:0;font-family:'Cairo',sans-serif;font-size:12px}
+
+header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding-block-end:20px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:34px;line-height:1;margin:0;letter-spacing:-.02em}
+.lang{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.lang button{background:transparent;border:0;padding:7px 14px;cursor:pointer;font-size:13px}
+.lang button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.lede{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:baseline;padding-block:18px 26px}
+.lede p{margin:0;font-family:var(--f-display);font-size:clamp(20px,3.2vw,28px);line-height:1.2;font-weight:500;max-width:30ch;text-wrap:balance}
+.chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:12px;color:var(--muted)}
+
+.grid{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:32px;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.rail{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:20px}
+.rail h3{font-family:var(--f-display);font-size:16px;margin:0 0 10px;font-weight:700}
+.field{display:flex;flex-direction:column;gap:6px;margin-block-end:12px}
+.field:last-child{margin-block-end:0}
+.field label,.field .lab{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.field .val{color:var(--ink);font-family:var(--f-mono);font-size:13px}
+select{font:inherit;font-size:14px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{flex:1 1 auto;padding:7px 8px;border:1px solid var(--line);background:transparent;border-radius:6px;font-size:13px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+
+.sec{margin-block-end:40px}
+.sec>h2{font-family:var(--f-display);font-size:23px;margin:4px 0 14px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.sec>.eyebrow{display:block}
+.sub{color:var(--muted);margin:-8px 0 14px;max-width:70ch}
+
+.rcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.rcard{text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:10px;min-width:0}
+.rcard[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.rcard .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.rcard .score{font-family:var(--f-display);font-size:34px;font-weight:700;line-height:1;color:var(--accent)}
+.chain{font-family:var(--f-display);font-weight:600;font-size:17px;line-height:1.3;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center}
+.chain .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.arr{color:var(--muted)}
+#app[dir=rtl] .arr{display:inline-block;transform:scaleX(-1)}
+.bars{display:grid;gap:5px}
+.bar{display:grid;grid-template-columns:76px 1fr 28px;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+.bar i{display:block;height:6px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+.bar i b{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:3px}
+#app[dir=rtl] .bar i b{inset:0 0 0 auto}
+.bar span:last-child{font-family:var(--f-mono);text-align:end;color:var(--ink)}
+
+.verdict{border-inline-start:3px solid var(--accent);padding:4px 0 4px 14px;padding-inline:14px 0;margin:18px 0;max-width:75ch;font-size:16px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-block-start:6px}
+.tag{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:var(--muted)}
+
+.detail{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:760px){.detail{grid-template-columns:minmax(0,1fr)}}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{font-weight:500;color:var(--muted);text-align:start;font-size:12px;padding:6px 10px 6px 0;padding-inline:0 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px 9px 0;padding-inline:0 12px;border-bottom:1px solid var(--line);vertical-align:top}
+td .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-inline-end:6px}
+.cell{display:inline-block;min-width:54px;text-align:center;padding:4px 8px;border-radius:6px;font-family:var(--f-mono);font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--muted);margin-block-start:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid var(--ink)}
+.legend i.d{border-top-style:dashed}
+.legend i.blk{height:10px;width:10px;border:0;border-radius:2px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px}
+.wl{display:flex;flex-direction:column;gap:6px}
+.wl .row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding-block:6px;font-size:14px}
+.up{color:var(--accent)}.dn{color:var(--bad)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{border-top:2px solid var(--line);padding-block:10px 0;display:flex;flex-direction:column;gap:4px}
+.tile .n{font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1.1}
+.tile .l{font-size:13px}
+.tile .s{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+#app[dir=rtl] .tile .s{font-family:'Cairo',sans-serif}
+.tile .g{height:4px;border-radius:2px;background:var(--line);position:relative;overflow:hidden;margin-block-start:4px}
+.tile .g b{position:absolute;inset:0 auto 0 0;background:var(--clay)}
+#app[dir=rtl] .tile .g b{inset:0 0 0 auto}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-block-start:14px}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+textarea.copybox{width:100%;min-height:150px;font-family:var(--f-mono);font-size:12px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;margin-block-start:10px}
+details{border-top:1px solid var(--line);padding-block:12px}
+details summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:17px}
+details ul{margin:10px 0 0;padding-inline-start:20px;max-width:75ch;color:var(--muted)}
+details li{margin-block-end:6px}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted)}
+svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.rcard{transition:border-color .15s,box-shadow .15s}}
+</style>
+
+<style>html{color-scheme:light dark}body{margin:0}</style>
+</head>
+<body>
+<div id="app" dir="ltr" lang="en"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- Data: regions (bundled indicative climatology + NASA-style indicators) ---------- */
+var REG={
+ nile:{en:"Nile Delta, Egypt",ar:"دلتا النيل، مصر",T:[13,14,16,19,23,26,28,28,26,23,18,14.5],P:[14,10,7,2,1,0,0,0,0,4,9,13],heat:18,tT:.35,tR:-3,smap:22,drought:35,grace:-1.2},
+ punjab:{en:"Punjab, India",ar:"البنجاب، الهند",T:[14,17,23,29,33,34,31,30,29,25,19,15],P:[20,22,18,12,18,70,200,180,90,15,5,10],heat:95,tT:.3,tR:-2,smap:40,drought:25,grace:-2.5},
+ iowa:{en:"Corn Belt, Iowa, USA",ar:"حزام الذرة، آيوا، أمريكا",T:[-6,-3,3,10,16,21,23,22,18,11,3,-4],P:[25,28,55,95,120,125,110,105,80,70,50,35],heat:3,tT:.25,tR:3,smap:60,drought:15,grace:-.2},
+ sahel:{en:"Sahel, Niger",ar:"الساحل، النيجر",T:[25,28,32,35,35,33,30,29,31,33,29,25],P:[0,0,2,8,30,70,140,190,90,10,0,0],heat:160,tT:.4,tR:-1,smap:30,drought:40,grace:.3},
+ pampas:{en:"Pampas, Argentina",ar:"البامبا، الأرجنتين",T:[24,23,21,17,13,10,9,11,14,17,20,23],P:[110,95,110,85,60,40,35,45,65,100,100,105],heat:10,tT:.2,tR:4,smap:55,drought:20,grace:-.4},
+ murray:{en:"Murray-Darling, Australia",ar:"موراي-دارلينج، أستراليا",T:[24,24,21,17,13,10,9,10,13,16,20,22],P:[40,38,38,35,38,38,38,38,40,45,42,40],heat:20,tT:.3,tR:-4,smap:35,drought:35,grace:-.8},
+ po:{en:"Po Valley, Italy",ar:"وادي بو، إيطاليا",T:[2,4,9,13,18,22,25,24,20,14,8,3],P:[55,50,60,80,85,70,50,70,75,95,90,60],heat:12,tT:.4,tR:-2,smap:45,drought:25,grace:-1},
+ rift:{en:"Rift Valley, Kenya",ar:"الوادي المتصدع، كينيا",T:[17,18,18,18,17,16,15,16,17,18,17,17],P:[40,40,80,160,120,60,50,60,50,60,100,70],heat:0,tT:.25,tR:-1,smap:50,drought:30,grace:0}
+};
+
+/* Crops not commercially established in a region are left out of its recommendations. */
+var EXC={nile:["canola"],iowa:["sesame","millet","peanut","chickpea","lentil","cotton","faba","sorghum"],sahel:["canola","potato","barley","wheat","faba","lentil"],
+ po:["cotton","sesame","peanut","millet","sorghum"],pampas:["sesame","millet","rice","lentil"],murray:["sesame","millet","faba"],rift:["canola","cotton","cover"],punjab:["canola","faba"]};
+function avail(c){var e=EXC[S.region];return !e||e.indexOf(c.id)<0;}
+
+/* ---------- Data: crops ---------- */
+function C(id,en,ar,fam,L,tmin,t1,t2,tmax,water,dsens,heat,salt,sd,profit,om,n,cover,root,legume){
+ return {id:id,en:en,ar:ar,fam:fam,L:L,tmin:tmin,t1:t1,t2:t2,tmax:tmax,water:water,dsens:dsens,heat:heat,salt:salt,
+  soil:{sand:sd[0],loam:sd[1],clay:sd[2],silt:sd[3]},profit:profit,om:om,n:n,cover:cover,root:root,legume:!!legume};
+}
+var CROPS=[
+ C("wheat","Wheat","قمح","poa",5,2,12,22,32,400,.6,6,1.5,[.6,1,.85,1],.55,.045,0,.6,2),
+ C("barley","Barley","شعير","poa",4,2,10,20,30,320,.45,8,2.5,[.75,1,.8,.95],.45,.04,0,.6,2),
+ C("maize","Maize","ذرة شامية","poa",4,10,20,30,38,550,.9,14,1,[.6,1,.8,.95],.75,.06,0,.4,2),
+ C("rice","Rice","أرز","poa",5,15,22,32,40,1100,1,20,1,[.3,.8,1,.9],.6,.05,0,.3,1),
+ C("sorghum","Sorghum","ذرة رفيعة","poa",4,12,24,34,42,380,.35,45,2,[.8,1,.9,.95],.4,.05,0,.5,3),
+ C("millet","Pearl millet","دخن","poa",3,14,25,35,44,280,.25,60,1.5,[1,.9,.7,.85],.3,.035,0,.4,2),
+ C("soy","Soybean","فول صويا","fab",4,10,20,30,38,500,.8,10,.5,[.6,1,.8,.95],.65,.05,60,.5,2,1),
+ C("faba","Faba bean","فول بلدي","fab",5,0,10,20,30,380,.6,5,1,[.5,.9,1,.9],.5,.055,90,.6,2,1),
+ C("chickpea","Chickpea","حمص","fab",5,3,15,25,35,250,.35,15,.5,[.8,1,.7,.9],.55,.045,60,.4,3,1),
+ C("lentil","Lentil","عدس","fab",4,2,12,22,32,230,.4,8,.5,[.8,1,.7,.9],.5,.04,50,.4,2,1),
+ C("peanut","Peanut","فول سوداني","fab",4,13,22,32,40,500,.7,15,.5,[1,.9,.5,.85],.65,.04,50,.3,2,1),
+ C("alfalfa","Alfalfa (berseem-type forage)","برسيم حجازي","fab",12,5,15,30,40,900,.5,40,1.5,[.6,1,.7,.95],.5,.11,150,1,3,1),
+ C("cotton","Cotton","قطن","mal",6,15,25,35,42,750,.55,40,2.5,[.6,.95,.9,1],.7,.03,0,.3,3),
+ C("potato","Potato","بطاطس","sol",4,3,14,22,30,500,.85,3,.8,[1,.95,.5,.9],.85,.02,0,.2,1),
+ C("tomato","Tomato","طماطم","sol",4,8,18,28,36,550,.8,12,1.5,[.8,1,.7,.95],.9,.02,0,.2,2),
+ C("sunflower","Sunflower","عباد الشمس","ast",4,6,18,28,38,450,.45,25,1.5,[.7,1,.8,.95],.5,.05,0,.4,3),
+ C("canola","Canola","كانولا","bra",5,0,10,20,30,350,.6,5,1.5,[.6,1,.8,.95],.55,.04,0,.6,3),
+ C("sesame","Sesame","سمسم","ped",4,14,24,34,42,320,.3,45,1,[.9,1,.7,.9],.55,.03,0,.3,2),
+ C("cover","Cover-crop year (vetch + rye)","موسم محصول تغطية (بقوليات + شيلم)","cov",4,0,8,20,32,150,.2,15,1.5,[.9,1,.9,1],.08,.10,70,1,2,1)
+];
+CROPS.forEach(function(c){ if(c.id==="cover") c.cover_=true; });
+
+/* ---------- i18n ---------- */
+var MS={en:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+        ar:["ينا","فبر","مار","أبر","ماي","يون","يول","أغس","سبت","أكت","نوف","ديس"]};
+var MF={en:["January","February","March","April","May","June","July","August","September","October","November","December"],
+        ar:["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"]};
+var TX={
+en:{
+ tagline:"Choose crop rotations that hold up as the climate moves.",
+ chip:"Field Shift · NASA Earth observations",
+ f_region:"Region (NASA climate layers)",f_soil:"Soil texture",f_som:"Soil organic matter",f_sal:"Soil salinity",f_irr:"Irrigation",f_last:"Last crop on this field",
+ sand:"Sand",loam:"Loam",clay:"Clay",silt:"Silt",
+ sal0:"None",sal1:"Low",sal2:"Medium",sal3:"High",
+ irr_rainfed:"Rain only",irr_limited:"Limited",irr_full:"Full",
+ h_farm:"Your field",h_scen:"Field Shift scenario",h_prio:"Your priorities",
+ s_dT:"Warming",s_rf:"Rainfall change",s_cut:"Irrigation supply cut",
+ s_hint:"Move these to see which rotations survive a hotter, drier future.",
+ p_soil:"Soil health",p_water:"Water saving",p_profit:"Profit",p_res:"Resilience",
+ p_hint:"Weights are relative. Set what matters most to the farmer.",
+ h_rec:"Recommended rotations",e_rec:"Ranked for your field and priorities",
+ sub_rec:"Each cycle repeats every three years. Pick one to see its planting windows, stress test and soil outlook.",
+ best:"Best fit",alt:"Alternative",
+ b_soil:"Soil",b_water:"Water",b_profit:"Profit",b_res:"Resilience",
+ h_orbit:"Orbit view",e_orbit:"Planting windows, today vs scenario",
+ lg_now:"Today",lg_scen:"Scenario window",
+ th_year:"Year",th_crop:"Crop",th_plant:"Plant in",th_yield:"Yield index",th_irr:"Irrigation",th_rain:"Useful rain",
+ mo:"mo",mm:"mm",earlier:"earlier",later:"later",same:"same timing as today",wk:"wk",
+ h_wl:"Winners and losers",e_wl:"Yield index change, scenario vs today",
+ winners:"Gaining ground",losers:"Losing ground",none:"No crop moves by more than 10 points.",
+ h_soil:"Soil carbon outlook",e_soil:"Soil organic matter over 10 years",
+ bau:"Keep growing",bau2:"every year",yrs:"years",
+ h_stress:"Stress test",e_stress:"Yield index as a percentage of potential",
+ st_now:"Today",st_scen:"Scenario",st_hot:"Hot, dry year",
+ h_nasa:"NASA signals for this region",e_nasa:"Regional indicators, bundled and indicative",
+ n_t:"Warming trend",n_t_u:"°C / decade",n_t_s:"NASA POWER · MERRA-2",
+ n_r:"Rainfall trend",n_r_u:"% / decade",n_r_s:"GPM IMERG",
+ n_sm:"Root-zone moisture",n_sm_u:"percentile",n_sm_s:"SMAP",
+ n_d:"Drought seasons",n_d_u:"% of seasons",n_d_s:"SMAP · GRACE-FO",
+ n_h:"Heat days over 35 °C",n_h_u:"days / year",n_h_s:"NASA POWER",
+ n_g:"Groundwater trend",n_g_u:"cm / year",n_g_s:"GRACE-FO",
+ h_clim:"Climate shift",e_clim:"Monthly temperature and rain, today vs scenario",
+ lg_t0:"Temperature today",lg_t1:"Temperature scenario",lg_p0:"Rain today",lg_p1:"Rain scenario",
+ copy:"Copy plan",copied:"Plan copied",copyfail:"Select the text below and copy it.",
+ h_how:"How AstroVibe works",
+ how:["Climate: each region bundles monthly temperature, rainfall, heat-day counts and NASA-derived trend indicators (POWER, GPM IMERG, SMAP, GRACE-FO). Values are indicative regional normals. Replace them with your own NASA POWER pull for a specific field.",
+      "Crops: 19 options with temperature curves, seasonal water need, drought and heat sensitivity, salt tolerance, soil texture fit, residue carbon, nitrogen fixation and ground cover.",
+      "Field Shift: the scenario shifts temperature, rain and irrigation supply. For every crop the tool searches all 12 sowing months and keeps the best, so you see how planting windows move.",
+      "Rules: no crop repeats within a cycle, no botanical family back to back, and the first crop cannot share a family with the last crop grown. Legumes and cover crops give the next crop a small yield lift.",
+      "Scoring: soil health (10-year organic matter, nitrogen credit, ground cover), water saving (irrigation drawn), profit, and resilience (hot, dry stress year plus the weakest season). Your priority sliders set the weights.",
+      "Limits: this is a transparent screening model, not a yield forecast. Use it to compare strategies, then check with local agronomists and soil tests."],
+ tag_n:"fixes about {n} kg N/ha",tag_heat:"heat-tolerant",tag_dry:"drought-tolerant",tag_root:"deep roots",tag_cov:"strong soil cover",tag_salt:"salt-tolerant",
+ h_imp:"Impact of switching",e_imp:"Compared with growing the same crop every year",
+ i_w:"Irrigation saved",i_w_u:"m³ / hectare / year",i_n:"Nitrogen credit gained",i_n_u:"kg N / hectare / year",
+ i_c:"Extra soil carbon",i_c_u:"t CO₂e / hectare, 10 years",i_s:"Hot, dry year yield",i_s_u:"points vs continuous",
+ i_fed:"feddan",imp_note:"Soil carbon is approximate: top 20 cm, bulk density 1.3 g/cm³, 58% carbon in organic matter.",
+ h_why:"Why not this crop?",e_why:"Pick any crop to see what limits it here",why_pick:"Crop",
+ lim_t:"temperature fit",lim_h:"heat stress",lim_w:"water shortage",lim_s:"soil texture",lim_sa:"soil salinity",
+ c_sum:"Use your own NASA POWER data",c_hint:"Run the Colab script, paste the JSON it prints, then apply. Optional keys: tT, tR, smap, drought, grace.",
+ c_apply:"Apply data",c_ok:"Custom climate applied",c_err:"Could not read the JSON. It needs T and P arrays with 12 numbers each.",c_name:"Custom (your NASA POWER data)",
+ why:function(o){
+  var m=o.k;
+  if(m==="reg")return o.c+" is not commercially established in this region, so the tool leaves it out.";
+  if(m==="fam")return o.c+" shares a botanical family with the last crop ("+o.l+"), so it cannot open the cycle, and in later years other crops score higher for your priorities.";
+  if(m==="in")return o.c+" is part of the recommended rotation "+o.r+".";
+  if(m==="ok")return o.c+" is viable here (yield index "+o.y+"%), but other crops score higher for your priorities. Its weakest factor is "+o.lim+".";
+  return o.c+" struggles here: yield index "+o.y+"% in the scenario ("+o.b+"% today). The main limit is "+o.lim+". "+o.det;
+ },
+ det:function(k,o){
+  if(k==="t")return "Its best sowing window still sits outside its comfort range (temperature fit "+o.p+"%).";
+  if(k==="h")return "About "+o.h+" days above 35 °C fall in its season, and it tolerates about "+o.c+".";
+  if(k==="w")return "It needs about "+o.w+" mm per season, rain gives about "+o.r+" mm and irrigation covers "+o.i+" mm.";
+  if(k==="s")return "Suitability on "+o.soil+" soil is "+o.p+"%.";
+  return "It tolerates salinity level "+o.t+" and the soil is level "+o.s+".";
+ },
+ few:"Not enough crops survive this scenario on this soil. Ease the warming, rain or irrigation settings, or check soil salinity.",
+ sum:function(o){return "Under "+o.dT+" and "+o.rf+" rainfall, this cycle moves soil organic matter from "+o.s0+"% to "+o.s1+"% in 10 years ("+o.b1+"% if you keep growing "+o.last+" every year). It draws "+o.irr+" mm of irrigation per year instead of "+o.birr+" mm, and holds a "+o.st+"% yield index in a hot, dry year ("+o.bst+"% for continuous "+o.last+")."},
+ planttxt:function(m,L,d){return MF.en[m]+" · "+L+" mo"+(d===null?"":" · "+d)}
+},
+ar:{
+ tagline:"اختر دورات زراعية تصمد أمام تغيّر المناخ.",
+ chip:"Field Shift · رصد الأرض من ناسا",
+ f_region:"المنطقة (طبقات ناسا المناخية)",f_soil:"قوام التربة",f_som:"المادة العضوية في التربة",f_sal:"ملوحة التربة",f_irr:"الري",f_last:"آخر محصول زُرع في الحقل",
+ sand:"رملية",loam:"طميية",clay:"طينية",silt:"غرينية",
+ sal0:"لا توجد",sal1:"منخفضة",sal2:"متوسطة",sal3:"مرتفعة",
+ irr_rainfed:"مطر فقط",irr_limited:"محدود",irr_full:"كامل",
+ h_farm:"حقلك",h_scen:"سيناريو التحوّل المناخي",h_prio:"أولوياتك",
+ s_dT:"الاحترار",s_rf:"تغيّر الأمطار",s_cut:"خفض إمدادات الري",
+ s_hint:"حرّك هذه القيم لترى أي الدورات تصمد في مستقبل أحرّ وأجف.",
+ p_soil:"صحة التربة",p_water:"توفير المياه",p_profit:"الربح",p_res:"المرونة المناخية",
+ p_hint:"الأوزان نسبية. حدّد ما يهمّ المزارع أكثر.",
+ h_rec:"الدورات الموصى بها",e_rec:"مرتبة حسب حقلك وأولوياتك",
+ sub_rec:"كل دورة تتكرر كل ثلاث سنوات. اختر واحدة لترى مواعيد الزراعة واختبار الإجهاد وتوقعات التربة.",
+ best:"الأنسب",alt:"بديل",
+ b_soil:"التربة",b_water:"المياه",b_profit:"الربح",b_res:"المرونة",
+ h_orbit:"عرض المدار",e_orbit:"مواعيد الزراعة: اليوم مقابل السيناريو",
+ lg_now:"اليوم",lg_scen:"موعد السيناريو",
+ th_year:"السنة",th_crop:"المحصول",th_plant:"الزراعة في",th_yield:"مؤشر الإنتاجية",th_irr:"الري",th_rain:"المطر المفيد",
+ mo:"أشهر",mm:"مم",earlier:"أبكر",later:"أبعد",same:"نفس توقيت اليوم",wk:"أسبوع",
+ h_wl:"الرابحون والخاسرون",e_wl:"تغيّر مؤشر الإنتاجية: السيناريو مقابل اليوم",
+ winners:"تتحسن",losers:"تتراجع",none:"لا يتغيّر أي محصول بأكثر من 10 نقاط.",
+ h_soil:"توقعات كربون التربة",e_soil:"المادة العضوية في التربة خلال 10 سنوات",
+ bau:"الاستمرار في زراعة",bau2:"كل عام",yrs:"سنوات",
+ h_stress:"اختبار الإجهاد",e_stress:"مؤشر الإنتاجية كنسبة من الإمكانات",
+ st_now:"اليوم",st_scen:"السيناريو",st_hot:"سنة حارة وجافة",
+ h_nasa:"إشارات ناسا لهذه المنطقة",e_nasa:"مؤشرات إقليمية مضمّنة وتقريبية",
+ n_t:"اتجاه الاحترار",n_t_u:"°م / عقد",n_t_s:"NASA POWER · MERRA-2",
+ n_r:"اتجاه الأمطار",n_r_u:"% / عقد",n_r_s:"GPM IMERG",
+ n_sm:"رطوبة منطقة الجذور",n_sm_u:"نسبة مئوية",n_sm_s:"SMAP",
+ n_d:"مواسم الجفاف",n_d_u:"% من المواسم",n_d_s:"SMAP · GRACE-FO",
+ n_h:"أيام الحر فوق 35°م",n_h_u:"يوم / سنة",n_h_s:"NASA POWER",
+ n_g:"اتجاه المياه الجوفية",n_g_u:"سم / سنة",n_g_s:"GRACE-FO",
+ h_clim:"التحوّل المناخي",e_clim:"الحرارة والأمطار شهريًا: اليوم مقابل السيناريو",
+ lg_t0:"الحرارة اليوم",lg_t1:"الحرارة في السيناريو",lg_p0:"المطر اليوم",lg_p1:"المطر في السيناريو",
+ copy:"نسخ الخطة",copied:"تم نسخ الخطة",copyfail:"حدّد النص أدناه وانسخه.",
+ h_how:"كيف يعمل AstroVibe",
+ how:["المناخ: لكل منطقة بيانات مضمّنة للحرارة الشهرية والأمطار وأيام الحر ومؤشرات اتجاه مشتقة من ناسا (POWER وGPM IMERG وSMAP وGRACE-FO). القيم تقريبية لمعدلات إقليمية. استبدلها ببيانات NASA POWER لحقل محدد.",
+      "المحاصيل: 19 خيارًا بمنحنيات حرارة واحتياج مائي موسمي وحساسية للجفاف والحر وتحمل للملوحة وملاءمة للتربة وكربون المخلفات وتثبيت النيتروجين والتغطية.",
+      "التحوّل المناخي: يغيّر السيناريو الحرارة والمطر وإمدادات الري. لكل محصول يبحث النموذج في الأشهر الاثني عشر عن أفضل موعد زراعة، فترى كيف تتحرك المواعيد.",
+      "القواعد: لا يتكرر محصول داخل الدورة، ولا تتتالى عائلة نباتية واحدة، ولا يشترك أول محصول مع آخر محصول زُرع في عائلته. البقوليات ومحاصيل التغطية تعطي المحصول التالي زيادة صغيرة.",
+      "التقييم: صحة التربة (المادة العضوية خلال 10 سنوات ورصيد النيتروجين والتغطية) وتوفير المياه والربح والمرونة (سنة حارة جافة وأضعف موسم). أوزان أولوياتك تحدد الترجيح.",
+      "الحدود: هذا نموذج فرز شفاف وليس توقعًا للمحصول. استخدمه لمقارنة الاستراتيجيات ثم راجع المرشد الزراعي المحلي وتحاليل التربة."],
+ tag_n:"يثبّت نحو {n} كجم نيتروجين/هكتار",tag_heat:"يتحمل الحرارة",tag_dry:"يتحمل الجفاف",tag_root:"جذور عميقة",tag_cov:"تغطية قوية للتربة",tag_salt:"يتحمل الملوحة",
+ h_imp:"أثر التحويل",e_imp:"مقارنةً بزراعة نفس المحصول كل عام",
+ i_w:"مياه ري موفّرة",i_w_u:"م³ / هكتار / سنة",i_n:"رصيد نيتروجين مكتسب",i_n_u:"كجم نيتروجين / هكتار / سنة",
+ i_c:"كربون إضافي في التربة",i_c_u:"طن CO₂e / هكتار خلال 10 سنوات",i_s:"إنتاجية السنة الحارة الجافة",i_s_u:"نقطة مقابل التكرار",
+ i_fed:"فدان",imp_note:"كربون التربة تقريبي: أعلى 20 سم، كثافة ظاهرية 1.3 جم/سم³، و58% كربون في المادة العضوية.",
+ h_why:"ليه مش المحصول ده؟",e_why:"اختر أي محصول لترى ما الذي يحدّه هنا",why_pick:"المحصول",
+ lim_t:"ملاءمة الحرارة",lim_h:"الإجهاد الحراري",lim_w:"نقص المياه",lim_s:"قوام التربة",lim_sa:"ملوحة التربة",
+ c_sum:"استخدم بياناتك من NASA POWER",c_hint:"شغّل سكريبت Colab والصق ناتج JSON هنا ثم اضغط تطبيق. مفاتيح اختيارية: tT وtR وsmap وdrought وgrace.",
+ c_apply:"تطبيق البيانات",c_ok:"تم تطبيق المناخ المخصص",c_err:"تعذّرت قراءة JSON. يلزم مصفوفتان T وP بكل منهما 12 رقمًا.",c_name:"مخصص (بيانات NASA POWER الخاصة بك)",
+ why:function(o){
+  var m=o.k;
+  if(m==="reg")return o.c+" غير منتشر تجاريًا في هذه المنطقة، لذلك يستبعده النموذج.";
+  if(m==="fam")return o.c+" من نفس العائلة النباتية لآخر محصول ("+o.l+")، فلا يصلح لبدء الدورة، وفي السنوات التالية تحقق محاصيل أخرى درجة أعلى وفق أولوياتك.";
+  if(m==="in")return o.c+" ضمن الدورة الموصى بها "+o.r+".";
+  if(m==="ok")return o.c+" صالح هنا (مؤشر الإنتاجية "+o.y+"%)، لكن محاصيل أخرى تحقق درجة أعلى وفق أولوياتك. أضعف عامل فيه هو "+o.lim+".";
+  return o.c+" يواجه صعوبة هنا: مؤشر الإنتاجية "+o.y+"% في السيناريو ("+o.b+"% اليوم). العامل الأكثر تقييدًا هو "+o.lim+". "+o.det;
+ },
+ det:function(k,o){
+  if(k==="t")return "أفضل موعد زراعة له ما زال خارج نطاق الحرارة المريحة (ملاءمة الحرارة "+o.p+"%).";
+  if(k==="h")return "يقع في موسمه نحو "+o.h+" يومًا فوق 35°م، وهو يتحمل نحو "+o.c+".";
+  if(k==="w")return "يحتاج نحو "+o.w+" مم في الموسم، والمطر يوفّر نحو "+o.r+" مم والري يغطي "+o.i+" مم.";
+  if(k==="s")return "ملاءمته للتربة "+o.soil+" هي "+o.p+"%.";
+  return "يتحمل مستوى ملوحة "+o.t+" والتربة عند المستوى "+o.s+".";
+ },
+ few:"عدد المحاصيل الصالحة في هذا السيناريو وهذه التربة غير كافٍ. خفّف الاحترار أو تغيّر الأمطار أو خفض الري، أو راجع ملوحة التربة.",
+ sum:function(o){return "في ظل احترار "+o.dT+" وتغيّر في الأمطار "+o.rf+"، تنقل هذه الدورة المادة العضوية من "+o.s0+"% إلى "+o.s1+"% خلال 10 سنوات (مقابل "+o.b1+"% إذا استمررت في زراعة "+o.last+" كل عام). وتستهلك "+o.irr+" مم ري سنويًا بدل "+o.birr+" مم، وتحافظ على مؤشر إنتاجية "+o.st+"% في سنة حارة وجافة (مقابل "+o.bst+"% عند تكرار "+o.last+")."},
+ planttxt:function(m,L,d){return MF.ar[m]+" · "+L+" أشهر"+(d===null?"":" · "+d)}
+}};
+
+/* ---------- State ---------- */
+var S={lang:"en",region:"nile",soil:"loam",som:1.3,sal:1,irr:"full",last:"wheat",dT:2,rf:-10,cut:20,
+       w:{soil:8,water:7,profit:5,res:7},sel:0};
+try{var sv=localStorage.getItem("av_lang"); if(sv==="ar"||sv==="en") S.lang=sv;}catch(e){}
+var RES=null;
+function t(k){return TX[S.lang][k];}
+function nm(c){return S.lang==="ar"?c.ar:c.en;}
+function f1(x){return (Math.round(x*10)/10).toFixed(1);}
+function clamp(x,a,b){a=a===undefined?0:a;b=b===undefined?1:b;return Math.max(a,Math.min(b,x));}
+function sgn(x,u){return (x>0?"+":"")+x+u;}
+function cropById(id){for(var i=0;i<CROPS.length;i++)if(CROPS[i].id===id)return CROPS[i];return CROPS[0];}
+
+/* ---------- Engine ---------- */
+function trap(T,c){
+ if(T<=c.tmin||T>=c.tmax)return 0;
+ if(T<c.t1)return (T-c.tmin)/(c.t1-c.tmin);
+ if(T<=c.t2)return 1;
+ return (c.tmax-T)/(c.tmax-c.t2);
+}
+function evalCrop(c,R,cl){
+ var T=R.T.map(function(x){return x+cl.dT;}),P=R.P.map(function(x){return x*cl.rf;});
+ var hw=T.map(function(x){return Math.pow(Math.max(0,x-22),2);});
+ var hs=hw.reduce(function(a,b){return a+b;},0)||1;
+ var heatYear=(R.heat+3*cl.dT)*(1+.3*cl.dT)*cl.hm;
+ var cap=({rainfed:0,limited:300,full:1000})[S.irr]*(1-cl.cut);
+ var awc=({sand:.85,loam:1,clay:.95,silt:1.05})[S.soil];
+ var tex=c.soil[S.soil];
+ var salt=1-clamp((S.sal-c.salt)*.3,0,.9);
+ var starts=[];
+ if(c.L>=12)starts=[0];else for(var q=0;q<12;q++)starts.push(q);
+ var best=null;
+ starts.forEach(function(s){
+  var sum=0,mn=1,rain=0,hsum=0,i,m,v;
+  for(i=0;i<c.L;i++){m=(s+i)%12;v=trap(T[m],c);sum+=v;mn=Math.min(mn,v);rain+=P[m];hsum+=hw[m];}
+  var mean=sum/c.L;
+  var tf=c.L>=12?(.5+.5*mean):(.6*mean+.4*mn);
+  var hd=heatYear*hsum/hs;
+  var hf=1/(1+.5*Math.pow(hd/c.heat,1.5));
+  var eff=.8*rain,def=Math.max(0,c.water-eff),irr=Math.min(def,cap),unmet=Math.max(0,def-irr);
+  var wf=clamp(1-c.dsens*(unmet/c.water)/awc);
+  var y=tf*hf*wf*tex*salt;
+  var obj=y-irr/6000;
+  if(!best||obj>best.obj)best={obj:obj,y:y,start:s,irr:irr,rain:eff,heat:hd,tf:tf,hf:hf,wf:wf,tex:tex,salt:salt};
+ });
+ return best;
+}
+function simSOM(seq,ys,Tmean){
+ var out=[S.som],s=S.som;
+ var tx=({sand:1.25,loam:1,clay:.8,silt:.95})[S.soil];
+ var k=Math.max(.01,.022*(1+.07*(Tmean-15))*tx);
+ for(var y=0;y<10;y++){var i=y%seq.length,c=seq[i];s=s+c.om*(.5+.5*ys[i])-k*s;out.push(s);}
+ return out;
+}
+function evalSeq(crops,EV,Tmean){
+ var n=crops.length;
+ function adj(set){
+  return crops.map(function(c,i){
+   var p=crops[(i-1+n)%n],y=EV[set][c.id].y;
+   if((p.legume)&&!c.legume)y=Math.min(1,y*1.08);
+   return y;
+  });
+ }
+ var ys=adj("scen"),yst=adj("stress"),yb=adj("base");
+ var irrs=crops.map(function(c){return EV.scen[c.id].irr;});
+ var som=simSOM(crops,ys,Tmean);
+ var delta=som[10]-S.som;
+ var nC=crops.reduce(function(a,c){return a+c.n;},0)/n;
+ var cov=crops.reduce(function(a,c){return a+c.cover;},0)/n;
+ var soil=.65*clamp((delta+.4)/1.2)+.2*clamp(nC/90)+.15*cov;
+ var irrMean=irrs.reduce(function(a,b){return a+b;},0)/n;
+ var water=clamp(1-irrMean/700);
+ var profit=clamp(crops.reduce(function(a,c,i){return a+ys[i]*c.profit;},0)/n/.7);
+ var mean=function(a){return a.reduce(function(x,y){return x+y;},0)/a.length;};
+ var res=.6*mean(yst)+.4*Math.min.apply(null,ys);
+ return {crops:crops,ys:ys,yst:yst,yb:yb,irrs:irrs,irrMean:irrMean,som:som,nC:nC,sc:{soil:soil,water:water,profit:profit,res:res}};
+}
+function compute(){
+ var R=REG[S.region];
+ var CL={base:{dT:0,rf:1,cut:0,hm:1},
+         scen:{dT:S.dT,rf:1+S.rf/100,cut:S.cut/100,hm:1},
+         stress:{dT:S.dT+1.5,rf:(1+S.rf/100)*.7,cut:Math.min(.8,S.cut/100+.25),hm:1.4}};
+ var EV={base:{},scen:{},stress:{}};
+ CROPS.forEach(function(c){for(var k in CL)EV[k][c.id]=evalCrop(c,R,CL[k]);});
+ var Tm=R.T.reduce(function(a,b){return a+b;},0)/12+S.dT;
+ var lastC=cropById(S.last);
+ var w=S.w,ws=w.soil+w.water+w.profit+w.res;
+ function total(sc){
+  if(ws<=0)return (sc.soil+sc.water+sc.profit+sc.res)/4;
+  return (w.soil*sc.soil+w.water*sc.water+w.profit*sc.profit+w.res*sc.res)/ws;
+ }
+ var pool=[],thr=[.25,.12],cands=[],i,j,k,tries;
+ for(tries=0;tries<2;tries++){
+  pool=CROPS.filter(function(c){return avail(c)&&EV.scen[c.id].y>=thr[tries];});
+  cands=[];
+  for(i=0;i<pool.length;i++)for(j=0;j<pool.length;j++)for(k=0;k<pool.length;k++){
+   if(i===j||j===k||i===k)continue;
+   if(!(i<j&&i<k))continue;
+   var a=pool[i],b=pool[j],c=pool[k];
+   if(a.fam===b.fam||b.fam===c.fam||c.fam===a.fam)continue;
+   if(a.fam===lastC.fam&&a.fam!=="cov")continue;
+   var r=evalSeq([a,b,c],EV,Tm);
+   r.total=total(r.sc);
+   cands.push(r);
+  }
+  if(cands.length>=3)break;
+ }
+ cands.sort(function(x,y){return y.total-x.total;});
+ var top=[],seen={};
+ for(i=0;i<cands.length&&top.length<3;i++){
+  var key=cands[i].crops.map(function(c){return c.id;}).sort().join("|");
+  if(seen[key])continue;seen[key]=1;top.push(cands[i]);
+ }
+ var bau=evalSeq([lastC],EV,Tm);bau.total=total(bau.sc);
+ if(S.sel>=top.length)S.sel=0;
+ return {R:R,CL:CL,EV:EV,top:top,bau:bau,Tm:Tm,lastC:lastC};
+}
+
+/* ---------- Drawing helpers ---------- */
+function pol(cx,cy,r,deg){var a=deg*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
+function arcPath(cx,cy,r,s,L){
+ if(L>=12)return "M"+(cx-r)+" "+cy+"a"+r+" "+r+" 0 1 0 "+(2*r)+" 0a"+r+" "+r+" 0 1 0 "+(-2*r)+" 0";
+ var a0=-90+s*30,a1=a0+L*30,p0=pol(cx,cy,r,a0),p1=pol(cx,cy,r,a1);
+ return "M"+p0[0].toFixed(1)+" "+p0[1].toFixed(1)+"A"+r+" "+r+" 0 "+(L*30>180?1:0)+" 1 "+p1[0].toFixed(1)+" "+p1[1].toFixed(1);
+}
+var RC=["var(--c1)","var(--c2)","var(--c3)"];
+function orbitSVG(rot,EV){
+ var cx=180,cy=180,radii=[62,96,130],o="";
+ o+='<svg viewBox="0 0 360 360" role="img" aria-label="'+t("h_orbit")+'">';
+ for(var m=0;m<12;m++){
+  var p=pol(cx,cy,158,-90+m*30+15);
+  o+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]+3.5).toFixed(1)+'" text-anchor="middle">'+MS[S.lang][m]+'</text>';
+  var a=pol(cx,cy,142,-90+m*30),b=pol(cx,cy,148,-90+m*30);
+  o+='<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="var(--line)" stroke-width="1"/>';
+ }
+ rot.crops.forEach(function(c,i){
+  var r=radii[i],sc=EV.scen[c.id],bs=EV.base[c.id];
+  o+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--line)" stroke-width="1"/>';
+  o+='<path d="'+arcPath(cx,cy,r+10,bs.start,c.L)+'" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>';
+  o+='<path d="'+arcPath(cx,cy,r,sc.start,c.L)+'" fill="none" stroke="'+RC[i]+'" stroke-width="13" stroke-linecap="round" opacity=".92"/>';
+  var lp=pol(cx,cy,r,-90+(sc.start+Math.min(c.L,12)/2)*30);
+  o+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+3.5).toFixed(1)+'" text-anchor="middle" style="fill:var(--bg);font-weight:600">Y'+(i+1)+'</text>';
+ });
+ o+='<text x="180" y="176" text-anchor="middle" style="font-size:11px;fill:var(--ink)">'+(S.lang==="ar"?"٣ سنوات":"3-year")+'</text>';
+ o+='<text x="180" y="191" text-anchor="middle">'+(S.lang==="ar"?"دورة":"cycle")+'</text>';
+ o+='</svg>';
+ o+='<div class="legend"><span><i class="blk" style="background:var(--c1)"></i>'+t("lg_scen")+'</span><span><i class="d" style="border-top-color:var(--muted)"></i>'+t("lg_now")+'</span></div>';
+ return o;
+}
+function climateSVG(R,CL){
+ var w=560,h=230,l=34,r=34,tp=14,b=26,pw=(w-l-r)/12;
+ var T0=R.T,T1=R.T.map(function(x){return x+CL.scen.dT;});
+ var P0=R.P,P1=R.P.map(function(x){return x*CL.scen.rf;});
+ var pMax=Math.max(20,Math.max.apply(null,P0),Math.max.apply(null,P1))*1.15;
+ var tMin=Math.min.apply(null,T0.concat(T1))-2,tMax=Math.max.apply(null,T0.concat(T1))+2;
+ var py=function(p){return h-b-p/pMax*(h-tp-b);};
+ var ty=function(x){return h-b-(x-tMin)/(tMax-tMin)*(h-tp-b);};
+ var o='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+t("h_clim")+'">';
+ for(var g=0;g<=4;g++){var yy=tp+g*(h-tp-b)/4;o+='<line x1="'+l+'" x2="'+(w-r)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--line)" stroke-width="1"/>';}
+ for(var m=0;m<12;m++){
+  var x=l+m*pw;
+  o+='<rect x="'+(x+pw*.12)+'" y="'+py(P0[m])+'" width="'+pw*.34+'" height="'+(h-b-py(P0[m]))+'" fill="var(--muted)" opacity=".45"/>';
+  o+='<rect x="'+(x+pw*.5)+'" y="'+py(P1[m])+'" width="'+pw*.34+'" height="'+(h-b-py(P1[m]))+'" fill="var(--c3)" opacity=".85"/>';
+  o+='<text x="'+(x+pw/2)+'" y="'+(h-8)+'" text-anchor="middle">'+MS[S.lang][m]+'</text>';
+ }
+ function line(arr,st){return '<polyline fill="none" '+st+' points="'+arr.map(function(v,m){return (l+m*pw+pw/2).toFixed(1)+','+ty(v).toFixed(1);}).join(" ")+'"/>';}
+ o+=line(T0,'stroke="var(--ink)" stroke-width="1.6" stroke-dasharray="4 4"');
+ o+=line(T1,'stroke="var(--clay)" stroke-width="2.4"');
+ o+='<text x="'+(l-6)+'" y="'+(tp+3)+'" text-anchor="end">'+Math.round(tMax)+'°</text><text x="'+(l-6)+'" y="'+(h-b)+'" text-anchor="end">'+Math.round(tMin)+'°</text>';
+ o+='<text x="'+(w-r+6)+'" y="'+(tp+3)+'">'+Math.round(pMax)+'</text><text x="'+(w-r+6)+'" y="'+(h-b)+'">0</text>';
+ o+='</svg>';
+ o+='<div class="legend"><span><i class="d"></i>'+t("lg_t0")+'</span><span><i style="border-top-color:var(--clay)"></i>'+t("lg_t1")+'</span><span><i class="blk" style="background:var(--muted);opacity:.6"></i>'+t("lg_p0")+' (mm)</span><span><i class="blk" style="background:var(--c3)"></i>'+t("lg_p1")+' (mm)</span></div>';
+ return o;
+}
+function somSVG(D){
+ var w=560,h=240,l=44,r=64,tp=14,b=28;
+ var series=D.top.map(function(x,i){return {a:x.som,c:RC[i],d:"",lab:String.fromCharCode(65+i)};});
+ series.push({a:D.bau.som,c:"var(--muted)",d:"5 4",lab:S.lang==="ar"?"حالي":"BAU"});
+ var all=[];series.forEach(function(s){all=all.concat(s.a);});
+ var mn=Math.min.apply(null,all)-.1,mx=Math.max.apply(null,all)+.1;
+ var X=function(i){return l+i*(w-l-r)/10;},Y=function(v){return h-b-(v-mn)/(mx-mn)*(h-tp-b);};
+ var o='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+t("h_soil")+'">';
+ for(var g=0;g<=4;g++){var v=mn+(mx-mn)*g/4,yy=Y(v);o+='<line x1="'+l+'" x2="'+(w-r)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--line)"/><text x="'+(l-6)+'" y="'+(yy+3.5)+'" text-anchor="end">'+f1(v)+'%</text>';}
+ for(var i=0;i<=10;i+=2)o+='<text x="'+X(i)+'" y="'+(h-8)+'" text-anchor="middle">'+i+'</text>';
+ series.forEach(function(s){
+  o+='<polyline fill="none" stroke="'+s.c+'" stroke-width="'+(s.d?1.8:2.6)+'"'+(s.d?' stroke-dasharray="'+s.d+'"':'')+' points="'+s.a.map(function(v,i){return X(i).toFixed(1)+","+Y(v).toFixed(1);}).join(" ")+'"/>';
+ });
+ // end labels, nudged apart
+ var ends=series.map(function(s){return {y:Y(s.a[10]),s:s};}).sort(function(p,q){return p.y-q.y;});
+ for(var e=1;e<ends.length;e++)if(ends[e].y-ends[e-1].y<12)ends[e].y=ends[e-1].y+12;
+ ends.forEach(function(e){o+='<text x="'+(w-r+8)+'" y="'+(e.y+3.5)+'" style="fill:'+e.s.c+';font-weight:600">'+e.s.lab+' '+f1(e.s.a[10])+'%</text>';});
+ o+='</svg>';
+ return o;
+}
+
+/* ---------- Rendering ---------- */
+function opt(list,sel){return list.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===sel?' selected':'')+'>'+o[1]+'</option>';}).join("");}
+function seg(k,list,cur){
+ return '<div class="seg" role="group" data-seg="'+k+'">'+list.map(function(o){return '<button type="button" data-v="'+o[0]+'" aria-pressed="'+(String(o[0])===String(cur))+'">'+o[1]+'</button>';}).join("")+'</div>';
+}
+function slider(id,label,min,max,step,val,unit){
+ return '<div class="field"><div class="lab"><label for="'+id+'">'+label+'</label><span class="val" id="v_'+id+'">'+fmtVal(id,val)+'</span></div><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'"></div>';
+}
+function fmtVal(id,v){
+ v=Number(v);
+ if(id==="dT")return "+"+f1(v)+" °C";
+ if(id==="rf")return sgn(v,"%");
+ if(id==="cut")return v+"%";
+ if(id==="som")return f1(v)+"%";
+ return v;
+}
+function buildShell(){
+ var app=document.getElementById("app");
+ app.dir=S.lang==="ar"?"rtl":"ltr";app.lang=S.lang;
+ var regs=Object.keys(REG).map(function(k){return [k,k==="custom"?t("c_name"):(S.lang==="ar"?REG[k].ar:REG[k].en)];});
+ var soils=["sand","loam","clay","silt"].map(function(k){return [k,t(k)];});
+ var sals=[0,1,2,3].map(function(k){return [k,t("sal"+k)];});
+ var irrs=["rainfed","limited","full"].map(function(k){return [k,t("irr_"+k)];});
+ var lasts=CROPS.filter(function(c){return c.id!=="cover";}).map(function(c){return [c.id,nm(c)];});
+ var logo='<svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="6" fill="var(--accent)"/><circle cx="20" cy="20" r="13" fill="none" stroke="var(--line)" stroke-width="1.5"/><path d="M20 7A13 13 0 0 1 33 20" fill="none" stroke="var(--c2)" stroke-width="4" stroke-linecap="round"/><path d="M7 20A13 13 0 0 0 20 33" fill="none" stroke="var(--c3)" stroke-width="4" stroke-linecap="round"/></svg>';
+ app.innerHTML=
+ '<header class="top"><div class="brand">'+logo+'<h1>AstroVibe</h1></div>'+
+ '<div class="lang" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="'+(S.lang==="en")+'">EN</button><button type="button" data-lang="ar" aria-pressed="'+(S.lang==="ar")+'">عربي</button></div></header>'+
+ '<div class="lede"><p>'+t("tagline")+'</p><span class="chip">'+t("chip")+'</span></div>'+
+ '<div class="grid"><aside class="rail" id="rail">'+
+  '<div><h3>'+t("h_farm")+'</h3>'+
+   '<div class="field"><label for="region">'+t("f_region")+'</label><select id="region">'+opt(regs,S.region)+'</select></div>'+
+   '<div class="field"><span class="lab">'+t("f_soil")+'</span>'+seg("soil",soils,S.soil)+'</div>'+
+   slider("som",t("f_som"),.3,4,.1,S.som)+
+   '<div class="field"><span class="lab">'+t("f_sal")+'</span>'+seg("sal",sals,S.sal)+'</div>'+
+   '<div class="field"><span class="lab">'+t("f_irr")+'</span>'+seg("irr",irrs,S.irr)+'</div>'+
+   '<div class="field"><label for="last">'+t("f_last")+'</label><select id="last">'+opt(lasts,S.last)+'</select></div>'+
+   '<details id="custom"><summary style="font-size:14px">'+t("c_sum")+'</summary><p class="hint" style="margin-block:8px">'+t("c_hint")+'</p><textarea class="copybox" id="cjson" style="min-height:90px" placeholder=\'{"T":[12 numbers],"P":[12 numbers],"heat":18}\'>'+escH(S.cjson||"")+'</textarea><div class="actions" style="margin-block-start:8px"><button type="button" class="btn alt" id="cApply">'+t("c_apply")+'</button><span class="hint" id="cMsg" aria-live="polite"></span></div></details></div>'+
+  '<div><h3>'+t("h_scen")+'</h3>'+
+   slider("dT",t("s_dT"),0,4,.5,S.dT)+slider("rf",t("s_rf"),-40,20,5,S.rf)+slider("cut",t("s_cut"),0,60,5,S.cut)+
+   '<p class="hint">'+t("s_hint")+'</p></div>'+
+  '<div><h3>'+t("h_prio")+'</h3>'+
+   slider("w_soil",t("p_soil"),0,10,1,S.w.soil)+slider("w_water",t("p_water"),0,10,1,S.w.water)+slider("w_profit",t("p_profit"),0,10,1,S.w.profit)+slider("w_res",t("p_res"),0,10,1,S.w.res)+
+   '<p class="hint">'+t("p_hint")+'</p></div>'+
+ '</aside><main id="results"></main></div>';
+}
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function bar(label,v){var p=Math.round(v*100);return '<div class="bar"><span>'+label+'</span><i><b style="width:'+p+'%"></b></i><span>'+p+'</span></div>';}
+function shiftTxt(c,EV){
+ if(c.L>=12)return null;
+ var d=((EV.scen[c.id].start-EV.base[c.id].start+18)%12)-6,wk=Math.round(d*4.3);
+ if(wk===0)return t("same");
+ return Math.abs(wk)+" "+t("wk")+" "+(wk<0?t("earlier"):t("later"));
+}
+function tags(c){
+ var a=[];
+ if(c.legume)a.push(t("tag_n").replace("{n}",c.n));
+ if(c.heat>=40)a.push(t("tag_heat"));
+ if(c.dsens<=.35)a.push(t("tag_dry"));
+ if(c.root===3)a.push(t("tag_root"));
+ if(c.cover>=.9)a.push(t("tag_cov"));
+ if(c.salt>=2.5&&S.sal>=2)a.push(t("tag_salt"));
+ return a;
+}
+function chainHTML(rot){
+ return rot.crops.map(function(c,i){return '<span><i class="dot" style="background:'+RC[i]+'"></i> '+nm(c)+'</span>'+(i<2?'<span class="arr">→</span>':'');}).join("");
+}
+function cellHTML(y){
+ var p=Math.round(y*100),bad=y<.35;
+ return '<span class="cell" style="background:color-mix(in srgb, var(--'+(bad?'bad':'accent')+') '+Math.round(bad?15+(1-y)*40:15+y*50)+'%, var(--surface))">'+p+'%</span>';
+}
+function planText(D,rot){
+ var L=[];
+ L.push("AstroVibe · "+(S.lang==="ar"?REG[S.region].ar:REG[S.region].en));
+ L.push(sgn(S.dT,"°C")+" / "+sgn(S.rf,"% rain")+" / -"+S.cut+"% irrigation");
+ L.push(rot.crops.map(function(c){return nm(c);}).join(" -> "));
+ rot.crops.forEach(function(c,i){
+  L.push("Y"+(i+1)+" "+nm(c)+": "+t("planttxt")(D.EV.scen[c.id].start,c.L,c.L>=12?null:shiftTxt(c,D.EV))+" | "+Math.round(rot.ys[i]*100)+"% | "+Math.round(rot.irrs[i])+" mm");
+ });
+ L.push("SOM 10y: "+f1(rot.som[0])+"% -> "+f1(rot.som[10])+"%");
+ return L.join("\n");
+}
+function renderResults(){
+ var D=RES=compute(),el=document.getElementById("results"),o="";
+ if(D.top.length<1){el.innerHTML='<div class="sec"><div class="empty">'+t("few")+'</div></div>'+climateBlock(D)+nasaBlock(D)+howBlock();return;}
+ var rot=D.top[S.sel]||D.top[0];
+ // recommended
+ o+='<section class="sec"><span class="eyebrow">'+t("e_rec")+'</span><h2>'+t("h_rec")+'</h2><p class="sub">'+t("sub_rec")+'</p><div class="rcards">';
+ D.top.forEach(function(r,i){
+  o+='<button type="button" class="rcard" data-sel="'+i+'" aria-pressed="'+(i===S.sel)+'"><div class="top"><span class="eyebrow">'+(i===0?t("best"):t("alt"))+' '+String.fromCharCode(65+i)+'</span><span class="score">'+Math.round(r.total*100)+'</span></div><div class="chain">'+chainHTML(r)+'</div><div class="bars">'+bar(t("b_soil"),r.sc.soil)+bar(t("b_water"),r.sc.water)+bar(t("b_profit"),r.sc.profit)+bar(t("b_res"),r.sc.res)+'</div></button>';
+ });
+ o+='</div>';
+ var lastN=nm(D.lastC);
+ o+='<p class="verdict">'+t("sum")({dT:sgn(S.dT,"°C"),rf:sgn(S.rf,"%"),s0:f1(rot.som[0]),s1:f1(rot.som[10]),b1:f1(D.bau.som[10]),last:lastN,irr:Math.round(rot.irrMean),birr:Math.round(D.bau.irrMean),st:Math.round(rot.yst.reduce(function(a,b){return a+b;},0)/3*100),bst:Math.round(D.bau.yst[0]*100)})+'</p>';
+ o+=impactBlock(D,rot);
+ o+='<div class="actions"><button type="button" class="btn" id="copyBtn">'+t("copy")+'</button><span class="hint" id="copyMsg" aria-live="polite"></span></div><div id="copyHolder"></div></section>';
+ // orbit + table
+ o+='<section class="sec"><span class="eyebrow">'+t("e_orbit")+'</span><h2>'+t("h_orbit")+'</h2><div class="detail"><div>'+orbitSVG(rot,D.EV)+'</div><div class="tbl"><table><thead><tr><th>'+t("th_year")+'</th><th>'+t("th_crop")+'</th><th>'+t("th_plant")+'</th><th>'+t("th_yield")+'</th><th>'+t("th_irr")+'</th><th>'+t("th_rain")+'</th></tr></thead><tbody>';
+ rot.crops.forEach(function(c,i){
+  var sc=D.EV.scen[c.id],sh=shiftTxt(c,D.EV);
+  o+='<tr><td class="mono">Y'+(i+1)+'</td><td><span class="sw" style="background:'+RC[i]+'"></span><b>'+nm(c)+'</b><div class="tags">'+tags(c).map(function(x){return '<span class="tag">'+x+'</span>';}).join("")+'</div></td><td>'+t("planttxt")(sc.start,c.L,sh)+'</td><td>'+cellHTML(rot.ys[i])+'</td><td class="mono">'+Math.round(rot.irrs[i])+' '+t("mm")+'</td><td class="mono">'+Math.round(sc.rain)+' '+t("mm")+'</td></tr>';
+ });
+ o+='</tbody></table></div></div></section>';
+ // winners & losers
+ var diffs=CROPS.filter(avail).map(function(c){return {c:c,d:D.EV.scen[c.id].y-D.EV.base[c.id].y};});
+ var lose=diffs.filter(function(x){return x.d<-.1;}).sort(function(a,b){return a.d-b.d;}).slice(0,5);
+ var win=diffs.filter(function(x){return x.d>.1;}).sort(function(a,b){return b.d-a.d;}).slice(0,5);
+ function wl(list,cls){return list.length?list.map(function(x){return '<div class="row"><span>'+nm(x.c)+'</span><span class="mono '+cls+'">'+(x.d>0?"+":"")+Math.round(x.d*100)+'</span></div>';}).join(""):'<p class="hint">'+t("none")+'</p>';}
+ o+='<section class="sec"><span class="eyebrow">'+t("e_wl")+'</span><h2>'+t("h_wl")+'</h2><div class="two"><div class="wl"><span class="eyebrow">'+t("winners")+'</span>'+wl(win,"up")+'</div><div class="wl"><span class="eyebrow">'+t("losers")+'</span>'+wl(lose,"dn")+'</div></div></section>';
+ // soil
+ o+='<section class="sec"><span class="eyebrow">'+t("e_soil")+'</span><h2>'+t("h_soil")+'</h2>'+somSVG(D)+'<div class="legend">'+D.top.map(function(r,i){return '<span><i class="blk" style="background:'+RC[i]+'"></i>'+String.fromCharCode(65+i)+' · '+r.crops.map(nm).join(" → ")+'</span>';}).join("")+'<span><i class="d" style="border-top-color:var(--muted)"></i>'+(S.lang==="ar"?"حالي":"BAU")+' · '+t("bau")+' '+lastN+' '+t("bau2")+'</span></div></section>';
+ // stress
+ o+='<section class="sec"><span class="eyebrow">'+t("e_stress")+'</span><h2>'+t("h_stress")+'</h2><div class="tbl"><table><thead><tr><th>'+t("th_crop")+'</th><th>'+t("st_now")+'</th><th>'+t("st_scen")+'</th><th>'+t("st_hot")+'</th></tr></thead><tbody>';
+ rot.crops.forEach(function(c,i){o+='<tr><td><span class="sw" style="background:'+RC[i]+'"></span>'+nm(c)+'</td><td>'+cellHTML(rot.yb[i])+'</td><td>'+cellHTML(rot.ys[i])+'</td><td>'+cellHTML(rot.yst[i])+'</td></tr>';});
+ var mean=function(a){return a.reduce(function(x,y){return x+y;},0)/a.length;};
+ o+='<tr><td><b>'+(S.lang==="ar"?"متوسط الدورة":"Cycle average")+'</b></td><td>'+cellHTML(mean(rot.yb))+'</td><td>'+cellHTML(mean(rot.ys))+'</td><td>'+cellHTML(mean(rot.yst))+'</td></tr>';
+ o+='<tr><td>'+(S.lang==="ar"?"حالي: ":"BAU: ")+lastN+'</td><td>'+cellHTML(D.bau.yb[0])+'</td><td>'+cellHTML(D.bau.ys[0])+'</td><td>'+cellHTML(D.bau.yst[0])+'</td></tr>';
+ o+='</tbody></table></div></section>';
+ o+=whyBlock(D);
+ o+=climateBlock(D)+nasaBlock(D)+howBlock();
+ el.innerHTML=o;
+}
+function mean3(a){return a.reduce(function(x,y){return x+y;},0)/a.length;}
+function sg(v){var r=Math.round(v);return (r>0?"+":"")+r;}
+function impactBlock(D,rot){
+ var w=(D.bau.irrMean-rot.irrMean)*10;
+ var dN=rot.nC-D.bau.nC;
+ var dC=(rot.som[10]-D.bau.som[10])/100*2600*.58*3.67;
+ var dS=(mean3(rot.yst)-D.bau.yst[0])*100;
+ var tiles=[
+  ["i_w",sg(w),'<span class="s">'+sg(w*.42)+' '+t("i_w_u").replace("m³ / hectare","m³ / "+t("i_fed"))+'</span>'],
+  ["i_n",sg(dN),""],
+  ["i_c",(dC>0?"+":"")+f1(dC),""],
+  ["i_s",sg(dS),""]
+ ];
+ return '<h3 class="eyebrow" style="margin:22px 0 4px">'+t("e_imp")+'</h3><div class="tiles" style="margin-block-end:6px">'+tiles.map(function(x){return '<div class="tile"><span class="n">'+x[1]+'</span><span class="l">'+t(x[0])+'</span><span class="s">'+t(x[0]+"_u")+'</span>'+x[2]+'</div>';}).join("")+'</div><p class="hint">'+t("imp_note")+'</p>';
+}
+function whyBlock(D){
+ var list=CROPS.filter(avail),i;
+ var inTop={};
+ D.top.forEach(function(r,i2){r.crops.forEach(function(c){(inTop[c.id]=inTop[c.id]||[]).push(String.fromCharCode(65+i2));});});
+ if(!S.why||!list.some(function(c){return c.id===S.why;})){
+  var d=list.filter(function(c){return !inTop[c.id];})[0]||list[0];S.why=d.id;
+ }
+ var c=cropById(S.why),ev=D.EV.scen[c.id],eb=D.EV.base[c.id];
+ var fac=[["lim_t",ev.tf,"t"],["lim_h",ev.hf,"h"],["lim_w",ev.wf,"w"],["lim_s",ev.tex,"s"],["lim_sa",ev.salt,"sa"]];
+ fac.sort(function(a,b){return a[1]-b[1];});
+ var worst=fac[0],o={c:nm(c),y:Math.round(ev.y*100),b:Math.round(eb.y*100),lim:t(worst[0]),k:"low"};
+ var lastC=D.lastC;
+ var txt;
+ if(inTop[c.id]){o.k="in";o.r=inTop[c.id].join(", ");txt=t("why")(o);}
+ else if(ev.y>=.25){
+  if(c.fam===lastC.fam&&c.fam!=="cov"){o.k="fam";o.l=nm(lastC);}else o.k="ok";
+  txt=t("why")(o);
+ }
+ else{
+  var k=worst[2],det;
+  if(k==="t")det=t("det")("t",{p:Math.round(ev.tf*100)});
+  else if(k==="h")det=t("det")("h",{h:Math.round(ev.heat),c:c.heat});
+  else if(k==="w")det=t("det")("w",{w:c.water,r:Math.round(ev.rain),i:Math.round(ev.irr)});
+  else if(k==="s")det=t("det")("s",{soil:t(S.soil),p:Math.round(ev.tex*100)});
+  else det=t("det")("sa",{t:c.salt,s:S.sal});
+  o.det=det;txt=t("why")(o);
+ }
+ var opts=list.map(function(x){return '<option value="'+x.id+'"'+(x.id===S.why?' selected':'')+'>'+nm(x)+'</option>';}).join("");
+ return '<section class="sec"><span class="eyebrow">'+t("e_why")+'</span><h2>'+t("h_why")+'</h2><div class="field" style="max-width:320px"><label for="why">'+t("why_pick")+'</label><select id="why">'+opts+'</select></div><p class="verdict">'+txt+'</p></section>';
+}
+function climateBlock(D){
+ return '<section class="sec"><span class="eyebrow">'+t("e_clim")+'</span><h2>'+t("h_clim")+'</h2>'+climateSVG(D.R,D.CL)+'</section>';
+}
+function nasaBlock(D){
+ var R=D.R;
+ var tiles=[
+  ["n_t",(R.tT>0?"+":"")+R.tT,clamp(R.tT/.6)],
+  ["n_r",(R.tR>0?"+":"")+R.tR,clamp(-R.tR/8)],
+  ["n_sm",R.smap,clamp((100-R.smap)/100)],
+  ["n_d",R.drought,clamp(R.drought/60)],
+  ["n_h",R.heat,clamp(R.heat/200)],
+  ["n_g",(R.grace>0?"+":"")+R.grace,clamp(-R.grace/4)]
+ ];
+ return '<section class="sec"><span class="eyebrow">'+t("e_nasa")+'</span><h2>'+t("h_nasa")+'</h2><div class="tiles">'+tiles.map(function(x){return '<div class="tile"><span class="n">'+x[1]+'</span><span class="l">'+t(x[0])+' <span class="hint">'+t(x[0]+"_u")+'</span></span><span class="s">'+t(x[0]+"_s")+'</span><div class="g"><b style="width:'+Math.round(x[2]*100)+'%"></b></div></div>';}).join("")+'</div></section>';
+}
+function howBlock(){
+ return '<details><summary>'+t("h_how")+'</summary><ul>'+t("how").map(function(x){return '<li>'+x+'</li>';}).join("")+'</ul></details>';
+}
+
+/* ---------- Events ---------- */
+function bind(){
+ var app=document.getElementById("app");
+ app.addEventListener("input",function(e){
+  var id=e.target.id;if(!id)return;
+  if(e.target.type==="range"){
+   var v=Number(e.target.value);
+   var lab=document.getElementById("v_"+id);if(lab)lab.textContent=fmtVal(id,v);
+   if(id==="som")S.som=v;else if(id==="dT")S.dT=v;else if(id==="rf")S.rf=v;else if(id==="cut")S.cut=v;
+   else if(id.indexOf("w_")===0)S.w[id.slice(2)]=v;
+   renderResults();
+  }
+ });
+ app.addEventListener("change",function(e){
+  var id=e.target.id;
+  if(id==="region"){S.region=e.target.value;renderResults();}
+  else if(id==="last"){S.last=e.target.value;renderResults();}
+  else if(id==="why"){S.why=e.target.value;renderResults();}
+ });
+ app.addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  if(b.dataset.lang){S.lang=b.dataset.lang;try{localStorage.setItem("av_lang",S.lang);}catch(x){}buildShell();renderResults();return;}
+  var g=b.closest("[data-seg]");
+  if(g){
+   var k=g.dataset.seg,v=b.dataset.v;
+   S[k]=(k==="sal")?Number(v):v;
+   g.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b));});
+   renderResults();return;
+  }
+  if(b.dataset.sel!==undefined){S.sel=Number(b.dataset.sel);renderResults();return;}
+  if(b.id==="cApply"){applyCustom();return;}
+  if(b.id==="copyBtn"){
+   var rot=RES.top[S.sel],txt=planText(RES,rot),msg=document.getElementById("copyMsg"),holder=document.getElementById("copyHolder");
+   var fallback=function(){holder.innerHTML='<textarea class="copybox" id="copyBox" readonly></textarea>';var ta=document.getElementById("copyBox");ta.value=txt;ta.focus();ta.select();msg.textContent=t("copyfail");};
+   try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){msg.textContent=t("copied");},fallback);}
+    else fallback();
+   }catch(x){fallback();}
+  }
+ });
+}
+function applyCustom(){
+ var ta=document.getElementById("cjson"),msg=document.getElementById("cMsg"),raw=ta.value,j;
+ try{
+  j=JSON.parse(raw);
+  var ok=function(a){return Array.isArray(a)&&a.length===12&&a.every(function(x){return typeof x==="number"&&isFinite(x);});};
+  if(!ok(j.T)||!ok(j.P)||j.T.some(function(x){return x<-50||x>60;})||j.P.some(function(x){return x<0;}))throw new Error("bad");
+  var num=function(v,d){return typeof v==="number"&&isFinite(v)?v:d;};
+  REG.custom={en:"Custom",ar:"مخصص",T:j.T,P:j.P,heat:num(j.heat,0),tT:num(j.tT,0),tR:num(j.tR,0),smap:num(j.smap,50),drought:num(j.drought,30),grace:num(j.grace,0)};
+  S.region="custom";S.cjson=raw;
+  buildShell();renderResults();
+  document.getElementById("custom").open=true;document.getElementById("cMsg").textContent=t("c_ok");
+ }catch(err){msg.textContent=t("c_err");}
+}
+buildShell();bind();renderResults();
+})();
+</script>
+</body>
+</html>
